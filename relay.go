@@ -16,7 +16,8 @@ import (
 
 const (
 	dialTimeout   = 10 * time.Second
-	warmTTL       = 60 * time.Second
+	warmTTL       = 25 * time.Second
+	warmMaxAge    = 20 * time.Second
 	warmPerKey    = 10
 	maxConns      = 16384
 	clientIdle    = 60 * time.Second
@@ -81,29 +82,36 @@ func connAlive(c *net.TCPConn) bool {
 	return alive
 }
 
-type warmPool struct {
-	mu sync.Mutex
-	m  map[string][]*net.TCPConn
+type warmEntry struct {
+	c  *net.TCPConn
+	at time.Time
 }
 
-var pool = &warmPool{m: make(map[string][]*net.TCPConn)}
+type warmPool struct {
+	mu sync.Mutex
+	m  map[string][]*warmEntry
+}
 
-// take returns a live warm tunnel for key, or nil. Dead tunnels are closed
-// and removed.
+var pool = &warmPool{m: make(map[string][]*warmEntry)}
+
+// take returns a live warm tunnel for key, or nil. Dead or too-old tunnels
+// are closed and removed; tunnels older than warmMaxAge are rejected because
+// residential exits can silently drop them (NAT churn) while the gateway TCP
+// stays alive, which would surface as SSLHandshake errors on reuse.
 func (p *warmPool) take(key string) *net.TCPConn {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	arr := p.m[key]
 	for len(arr) > 0 {
 		last := len(arr) - 1
-		c := arr[last]
+		e := arr[last]
 		arr = arr[:last]
-		if c != nil && connAlive(c) {
+		if e != nil && e.c != nil && time.Since(e.at) < warmMaxAge && connAlive(e.c) {
 			p.m[key] = arr
-			return c
+			return e.c
 		}
-		if c != nil {
-			c.Close()
+		if e != nil && e.c != nil {
+			e.c.Close()
 		}
 	}
 	p.m[key] = arr
@@ -118,7 +126,7 @@ func (p *warmPool) push(key string, c *net.TCPConn) {
 		c.Close()
 		return
 	}
-	p.m[key] = append(arr, c)
+	p.m[key] = append(arr, &warmEntry{c: c, at: time.Now()})
 	p.mu.Unlock()
 
 	go func() {
@@ -126,7 +134,7 @@ func (p *warmPool) push(key string, c *net.TCPConn) {
 		p.mu.Lock()
 		a := p.m[key]
 		for i, x := range a {
-			if x == c {
+			if x != nil && x.c == c {
 				p.m[key] = append(a[:i], a[i+1:]...)
 				break
 			}

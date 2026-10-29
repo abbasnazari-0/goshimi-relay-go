@@ -39,13 +39,19 @@ piped byte-for-byte to `relay-go`. Port `18082` is blocked from outside with an
 
 | asset | size | sha256 |
 |---|---|---|
-| `relay-go` (v2) | 3,125,569 | `8c1fe78df25aa01d5fb525f355c4c134e7e7ef606284a46861be2716db34932d` |
-| `relay-go-arm64` (v2) | 3,022,071 | `75543c320389b2489cc5d39cb28528b731a6c1780fa569e6d6d0976e479cfba9` |
+| `relay-go` (v2.1) | 3,125,601 | `a1c22374e54bf7c64c1eaa0ed5349f05d0f8c36814f076f0e646c34d08b2cb74` |
+| `relay-go-arm64` (v2.1) | 3,022,199 | `4674451d511aae7d3c0e6eaf5cfa4a34f73402fee2e1dce9d3e958d2e821d0f8` |
 | `relay-health` | 2,314,400 | `57b7cdb09d530f1354e8f1ddade47f6c5bbf2b3f1610eb6874d38b9d4962e008` |
+
+## v2.1 changes (2026-10-29)
+
+- Warm tunnels older than **20s** are rejected on take (stale residential exits
+  caused `SSLHandshakeException: Connection closed by peer` on reuse) and the
+  pool TTL is reduced to **25s**.
 
 ## v2 changes (2026-10-28)
 
-- Warm pool per (auth, target): 3 → **10** tunnels, TTL 30s → **60s**
+- Warm pool per (auth, target): 3 → **10** tunnels
 - Client idle timeout 15s → **60s** (fewer re-CONNECTs for keep-alive clients)
 - TCP keep-alive 10s → 30s
 - Two extra pre-warmed AdMob hosts: `adservice.google.com`, `securepubads.g.doubleclick.net`

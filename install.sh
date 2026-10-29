@@ -11,17 +11,17 @@
 set -euo pipefail
 
 REPO="abbasnazari-0/goshimi-relay-go"
-REL="https://github.com/$REPO/releases/download/v2"
+REL="https://github.com/$REPO/releases/download/v2.1"
 
-# v2 binaries: relay-go with an enlarged warm pool (10 tunnels per key,
-# 60s TTL) + two extra pre-warmed AdMob hosts + longer client idle.
+# v2.1 binaries: warm pool rejects tunnels older than 20s (stale residential
+# exits caused SSLHandshake errors on reuse) and TTL reduced to 25s.
 ARCH="$(uname -m)"
 if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
   BIN_URL="$REL/relay-go-arm64"
-  BIN_SHA="75543c320389b2489cc5d39cb28528b731a6c1780fa569e6d6d0976e479cfba9"
+  BIN_SHA="4674451d511aae7d3c0e6eaf5cfa4a34f73402fee2e1dce9d3e958d2e821d0f8"
 else
   BIN_URL="$REL/relay-go"
-  BIN_SHA="8c1fe78df25aa01d5fb525f355c4c134e7e7ef606284a46861be2716db34932d"
+  BIN_SHA="a1c22374e54bf7c64c1eaa0ed5349f05d0f8c36814f076f0e646c34d08b2cb74"
 fi
 HLT_URL="$REL/relay-health"
 HLT_SHA="57b7cdb09d530f1354e8f1ddade47f6c5bbf2b3f1610eb6874d38b9d4962e008"
